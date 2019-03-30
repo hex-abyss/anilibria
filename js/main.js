@@ -716,3 +716,7 @@ $(document).on("click", "[data-release-tags]", function(e) {
 	e.preventDefault();
 	$('#tagsModal').modal('show');
 });
+
+$(".spoiler").click(function() {
+    $(this).next('.spoiler-content').toggleClass("opened");
+});
