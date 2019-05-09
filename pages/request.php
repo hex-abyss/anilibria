@@ -92,7 +92,7 @@ require($_SERVER['DOCUMENT_ROOT'].'/private/header.php');
 			</ul>
 			<br/>
 		</div>
-		<div class="req">
+		<div class="req reqe">
 			<font style="font-size: 16px;">
 				<b>Условия и обязанности</b>
 			</font>
