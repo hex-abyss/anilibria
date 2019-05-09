@@ -450,6 +450,8 @@ function auth(){
 					'last_activity' => $row['last_activity'],
 					'dir' => substr(md5($row['id']), 0, 2),
 					'ads' => $row['ads'],
+					'downloaded' => 0,
+					'uploaded' => 0
 				];
 		$user['user_values'] = [];
 		if(!empty($row['user_values'])){			
@@ -460,14 +462,29 @@ function auth(){
 		$query->execute();
 		if($query->rowCount() == 1){
 			$row = $query->fetch();
-			$user['downloaded'] = $row['downloaded'];
-			$user['uploaded'] = $row['uploaded'];
-			if(empty($user['uploaded'])) $user['uploaded'] = 1;
-			if(empty($user['downloaded'])) $user['downloaded'] = 1;
-			$user['rating'] = round($user['uploaded']/$user['downloaded']/1024, 2);
-			if($user['rating'] > 100) $user['rating'] = 100;
+			$user['downloaded'] = formatBytes($row['downloaded']);
+			$user['uploaded'] = formatBytes($row['uploaded']);
 		}
 	}
+}
+
+function seedersRating(){
+	global $db; $result = ''; $i = 1;
+	$query = $db->query('SELECT `downloaded`, `uploaded`, `torrent_pass_version` FROM `xbt_users` ORDER BY `uploaded` DESC LIMIT 50');
+	while($row=$query->fetch()){
+		$select = $db->prepare('SELECT `login` FROM `users` WHERE `id` = :id');
+		$select->bindParam(':id', $row['torrent_pass_version']);
+		$select->execute();
+		if($select->rowCount() != 1){
+			continue;
+		}
+		$login = $select->fetch()['login'];
+		$download = formatBytes($row['downloaded']);
+		$upload = formatBytes($row['uploaded']);
+		$result .="<tr><td>$i</td><td>$login</td><td>$upload</td><td>$download</td></tr>";
+		$i++;
+	}
+	return $result;
 }
 
 function base32_map($i, $do = 'encode'){
@@ -1090,6 +1107,9 @@ function close_sess(){
 }
 
 function formatBytes($size, $precision = 2){
+	if(empty($size)){
+		return 0;
+	}
     $base = log($size, 1024);
     $suffixes = ['', 'KB', 'MB', 'GB', 'TB', 'PB'];
     return round(pow(1024, $base - floor($base)), $precision) .' '. $suffixes[floor($base)];
@@ -1116,7 +1136,7 @@ function parse_code_bb($text){
 
 function isBlock($str){
 	global $var;
-	if(strpos($str, geoip_country_code_by_name($var['ip'])) !== false){
+	if(strpos($str, $var['country']) !== false){
 		return true;
 	}
 	return false;
@@ -1136,7 +1156,11 @@ function adsUrl(){
 		return implode(",", $result);
 	}
 	function adsRandom($cache, $arr, $min){
-		$host = [];
+		return 'rey';
+		global $var; $host = []; 
+		if($var['country'] == 'EE'){
+			return 'rey';
+		}
 		$tmp = $cache->get('playerStatAds');
 		if($tmp !== false){
 			$arr = json_decode($tmp, true);
@@ -1192,6 +1216,11 @@ function showRelease(){
 	if(!$user || $user['access'] == 1){
 		$var['release']['block'] = isBlock($release['block']); 
 	}
+	
+	if(!$user && $release['status'] == 3){
+		return release404();
+	}
+	
 	$var['title'] = "{$release['name']} / {$release['ename']}";
 	$var['release']['id'] = $release['id'];
 	$var['release']['name'] = $release['ename'];
@@ -1244,6 +1273,9 @@ function showRelease(){
 	}else{
 		$release['other'] = '';
 	}
+	
+	$release['edityear'] = $release['year'];
+	
 	if(!empty($release['year']) && !empty($release['season'])){
 		$xtmp = implode(' ', [$release['year'], $release['season']]);
 		if(in_array($release['season'], $var['season'])){
@@ -1258,6 +1290,7 @@ function showRelease(){
 	$page = str_replace('{releaseid}', $release['id'], $page);
 	$page = str_replace('{voice}', $release['voice'], $page);
 	$page = str_replace('{year}', $release['year'], $page);
+	$page = str_replace('{edityear}', $release['edityear'], $page);
 	$page = str_replace('{type}', $release['type'], $page);
 	$page = str_replace('{other}', $release['other'], $page);
 	
@@ -1270,9 +1303,9 @@ function showRelease(){
 	
 	$poster = $_SERVER['DOCUMENT_ROOT'].'/upload/release/350x500/'.$release['id'].'.jpg';
 	if(!file_exists($poster)){
-		$tmpImg = '/upload/release/350x500/default.jpg';
+		$tmpImg = urlCDN('/upload/release/350x500/default.jpg');
 	}else{
-		$tmpImg = fileTime($poster);
+		$tmpImg = urlCDN(fileTime($poster));
 	}
 	$page = str_replace('{img}', $tmpImg, $page);
 	$var['og'] .= "<meta property='og:image' content='$tmpImg' />";
@@ -1312,6 +1345,9 @@ function showRelease(){
 			$button .= '<button data-xrelease-edit class="">Редактировать</button>';
 			$button .= '<a href="/pages/new.php"><button class="">Создать</button></a>';	
 		}
+	}
+	if(!$user || $user['access'] == 1){
+		$button .= '<button data-release-error>Сообщить об ошибке</button>';
 	}
 	$page = str_replace('{button}', $button, $page);	
 	$page = str_replace('{id}', $release['id'], $page);	
@@ -1553,7 +1589,7 @@ function footerJS(){
 			}
 			$tmp = getReleaseVideo($var['release']['id']);
 			if(!empty($tmp) && !$var['release']['block']){
-				$tmpPlayer = str_replace('{playerjs}', fileTime('/js/player.js'), getTemplate('playerjs'));	
+				$tmpPlayer = str_replace('{playerjs}', urlCDN(fileTime('/js/player.js')), getTemplate('playerjs'));	
 				$tmpPlayer = str_replace('{deny}', adsUrl(), $tmpPlayer);
 				$result .= str_replace('{playlist}', $tmp, $tmpPlayer);
 			}
@@ -1578,6 +1614,7 @@ function footerJS(){
 		case 'request':
 		case 'links':
 		case 'new-season':
+		case 'seeders':
 			$result .= str_replace('{page}', '', $vk);
 		break;
 		case 'donate':
@@ -1696,7 +1733,7 @@ function getReleaseVideo($id){
 					continue;
 				}
 				$download = '';
-				if(!empty($val['file'])){
+				if(!empty($val['file']) && !empty($var['release']['name'])){
 					$epNumber = $key;
 					$epName = trim($var['release']['name']);
 					$download = mp4_link($val['file'].'.mp4')."?download=$epName-$epNumber-sd.mp4";
@@ -1831,7 +1868,7 @@ function updateYoutube(){
 
 function youtubeShow(){
 	global $db; $i = 0; $arr = []; $arr1 = []; $arr2 = []; $data = []; $result = '';
-	$tmpl = '<td><a href="{url}" target="_blank"><img src="{img}" alt="{alt}" height="245" style="{style}"></a></td>';
+	$tmpl = '<td><a href="{url}" target="_blank"><img src="{img}" alt="{alt}" height="245"></a></td>';
 	$query = $db->query('SELECT `vid`, `title` FROM `youtube` WHERE `type` = \'1\' ORDER BY `time` DESC  LIMIT 12');
 	$query->execute();
 	while($row = $query->fetch()){
@@ -1853,7 +1890,7 @@ function youtubeShow(){
 	$i = 0;
 	foreach($data as $v){
 		$youtube = str_replace('{url}', "https://www.youtube.com/watch?v={$v['vid']}", $tmpl);
-		$youtube = str_replace('{img}', '/upload/youtube/'.hash('crc32', $v['vid']).'.jpg', $youtube);
+		$youtube = str_replace('{img}', urlCDN(fileTime('/upload/youtube/'.hash('crc32', $v['vid']).'.jpg')), $youtube);
 		$youtube = str_replace('{alt}', $v['title'], $youtube);
 		$arr["$i"][] = $youtube;
 		if(count($arr[$i]) == 2){
@@ -2100,9 +2137,9 @@ function showPosters(){
 	
 	$query = $db->query('SELECT `id`, `name`, `ename`, `code`, `description` FROM `xrelease` ORDER BY `last` DESC LIMIT '.$limit);
 	while($row=$query->fetch()){	
-		$img = fileTime('/upload/release/240x350/'.$row['id'].'.jpg');
+		$img = urlCDN(fileTime('/upload/release/240x350/'.$row['id'].'.jpg'));
 		if(!$img){
-			$img = '/upload/release/240x350/default.jpg';
+			$img = urlCDN('/upload/release/240x350/default.jpg');
 		}
 		$tmp = getTemplate('torrent-block');
 		$tmp = str_replace('{id}', $row['code'], $tmp);
@@ -2263,9 +2300,9 @@ function showCatalog(){
 		foreach($data as $key => $val){
 			$poster = $_SERVER['DOCUMENT_ROOT'].'/upload/release/270x390/'.$val['id'].'.jpg';
 			if(!file_exists($poster)){
-				$img = '/upload/release/270x390/default.jpg';
+				$img = urlCDN('/upload/release/270x390/default.jpg');
 			}else{
-				$img = fileTime($poster);
+				$img = urlCDN(fileTime($poster));
 			}
 			$xname = releaseNameByID($val['id']);
 			$arr[$i][] = str_replace('{alt}', "{$xname['0']} / {$xname['1']}", str_replace('{id}', releaseCodeByID($val['id']), str_replace('{img}', $img, $tmplTD)));
@@ -2404,9 +2441,9 @@ function showSchedule(){
 		while($row=$query->fetch()){
 			$poster = $_SERVER['DOCUMENT_ROOT']."/upload/release/200x280/{$row['id']}.jpg";
 			if(!file_exists($poster)){
-				$img = '/upload/release/200x280/default.jpg';
+				$img = urlCDN('/upload/release/200x280/default.jpg');
 			}else{
-				$img = fileTime($poster);
+				$img = urlCDN(fileTime($poster));
 			}
 			$arr["$key"][$i][] = [ 
 				str_replace('{alt}', "{$row['name']} / {$row['ename']}", str_replace('{id}', releaseCodeByID($row['id']), str_replace('{img}', $img, str_replace('{runame}', "{$row['name']}", str_replace('{series}', releaseSeriesByID($row['id']), str_replace('{description}', releaseDescriptionByID($row['id'], 99),$tmpl2))))))
@@ -2454,13 +2491,9 @@ function countRatingRelease($rid) {
 	return $count;
 }
 
-
 function sendHH(){
-	global $cache, $var;
-	$ip = md5($var['ip']);
-	if($cache->get($ip) !== false){
-		_message('access', 'error');
-	}
+	global $var;
+	testRecaptcha();
 	$result = '';
 	$info = [
 		'rPosition' => 'Заявка', 
@@ -2521,9 +2554,9 @@ function sendHH(){
 		$result .= "<b>{$info["$key"]}:</b><br/>";
 		$result .= htmlspecialchars($val, ENT_QUOTES, 'UTF-8')."<br/><br/>";		
 	}
-	_mail('anilibriahh@protonmail.com', "[{$position[$arr['rPosition']]}] новая заявка", $result);
-	_mail('lupin@anilibria.tv', "[{$position[$arr['rPosition']]}] новая заявка", $result);
-	$cache->set($ip, 1, 86400);
+	$title = genRandStr(8, 1);
+	_mail('anilibriahh@protonmail.com', "{$position[$arr['rPosition']]} новая заявка [$title]", $result);
+	_mail('lupin@anilibria.tv', "{$position[$arr['rPosition']]} новая заявка [$title]", $result);
 	_message('success');
 }
 
@@ -2655,9 +2688,9 @@ function showAscReleases(){
 		while($row=$query->fetch()){
 			$poster = $_SERVER['DOCUMENT_ROOT']."/upload/release/200x280/{$row['id']}.jpg";
 			if(!file_exists($poster)){
-				$img = '/upload/release/200x280/default.jpg';
+				$img = urlCDN('/upload/release/200x280/default.jpg');
 			}else{
-				$img = fileTime($poster);
+				$img = urlCDN(fileTime($poster));
 			}
 			$key = mb_strtoupper(mb_substr($row['name'], 0, 1,"utf-8"));
 			
@@ -2692,27 +2725,6 @@ function showAscReleases(){
 		$cache->set('showAscReleases', $result, 86400);
 	}
 	return $result;
-}
-
-function importFavorite(){
-	global $db, $user;
-	if($user && !empty($user['vk'])){
-		$query = $db->prepare('SELECT * FROM `f_tmp` WHERE `vid` = :vid');
-		$query->bindParam(':vid', $user['vk']);
-		$query->execute();
-		while($row=$query->fetch()){
-			if(!isFavorite($user['id'], $row['rid'])){
-				$insert = $db->prepare('INSERT INTO `favorites` (`uid`, `rid`) VALUES (:uid, :rid)');
-				$insert->bindParam(':uid', $user['id']);
-				$insert->bindParam(':rid', $row['rid']);
-				$insert->execute();
-			}
-			$delete = $db->prepare('DELETE FROM `f_tmp` WHERE `vid` = :vid AND `rid` = :rid');
-			$delete->bindParam(':vid', $user['vk']);
-			$delete->bindParam(':rid', $row['rid']);
-			$delete->execute();
-		}
-	}
 }
 
 function changeADS(){
@@ -2845,4 +2857,40 @@ function showNewSeason() {
 	}
 	$var['title'] = "Аниме сезон $year $season";
 	return "<div class='news-block'>$video<div>$result</div><div class='clear'></div><div style='margin-top:10px;'></div></div>";
+}
+
+function urlCDN($url){
+	global $conf;
+	if($conf['cdn']){
+		return 'https://static.anilibria.tv'.$url;
+	}
+	return $url;
+}
+
+function sendReleaseReport(){
+	global $var;
+	if(empty($_POST['mes']) || empty($_POST['url']) || mb_strlen($_POST['mes']) > 250){
+		_message('empty', 'error');
+	}
+	testRecaptcha();
+	$title = genRandStr(8, 1);
+	$url = 'https://www.anilibria.tv'.htmlspecialchars($_POST['url'], ENT_QUOTES, 'UTF-8');
+	$report = htmlspecialchars($_POST['mes'], ENT_QUOTES, 'UTF-8');
+	_mail('anilibria@protonmail.com', "Сообщение об ошибке [$title]", "Запрос отправили с IP {$var['ip']}<br/><br/>$url<br/><br/>{$var['user_agent']}<br/><br/>$report");
+	_mail('lupin@anilibria.tv', "Сообщение об ошибке [$title]", "Запрос отправили с IP {$var['ip']}<br/><br/>$url<br/><br/>{$var['user_agent']}<br/><br/>$report");
+	_message('success');
+}
+
+function iframePlayer(){	
+	if(empty($_GET['id']) || !ctype_digit($_GET['id'])){
+		_message('empty', 'error');
+	}
+	$playList = getReleaseVideo($_GET['id']);
+	if($playList){
+		$result = str_replace('{playerjs}', urlCDN(fileTime('/js/player.js')), getTemplate('playerjs'));	
+		$result = str_replace('{deny}', adsUrl(), $result);
+		$result = str_replace('{playlist}', $playList, $result);
+		return ['id' => $_GET['id'], 'result' => $result];
+	}
+	return '';
 }

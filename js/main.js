@@ -21,6 +21,7 @@ $(document).ready(function() {
 			}
 		}
 	}
+	$('[data-toggle="tooltip"]').tooltip();
 });
 
 $(document).on("click", "[data-submit-login]", function(e) {
@@ -167,7 +168,7 @@ $(document).on("click", "[data-2fa-start]", function(e) {
 			$("#2facheck").val('');
 			$("#2fapasswd").val('');
 		}
-					
+
 		$("#2faMes").html("(<font color="+color+">"+data.mes+"</font>)");
 	});
 });
@@ -265,7 +266,7 @@ $(document).on("click", "[data-save-user-values]", function(e) {
 				}
 				if(sex=="2"){
 					$("#sex").text("Женский");
-				}	
+				}
 			}
 			if(vk != "") $("#vk").text(vk);
 			if(telegram != "") $("#telegram").text(telegram);
@@ -286,14 +287,14 @@ $(document).on("click", "[data-save-user-values]", function(e) {
 
 $(document).on('click', '[data-tab]', function(e){
 	$(this).blur();
-	e.preventDefault();	
+	e.preventDefault();
 	tabSwitch($(this).data('tab'));
 });
 
 function tabSwitch(tab){
 	$('[data-tab]').removeClass('active');
 	$("[data-tab="+tab+"]").addClass('active');
-	
+
 	$('.xplayer').hide();
 	$('#'+tab).show();
 }
@@ -319,7 +320,7 @@ $(document).on('click', '[data-light]', function(e){
 
 $(document).on('click', '[data-online-table]', function(e){
 	$(this).blur();
-	e.preventDefault();	
+	e.preventDefault();
 	$('#statModal').modal('show');
 });
 
@@ -384,12 +385,12 @@ $(document).on('click', '[data-send-torrent]', function(e){
 		}
 	});
 	if(document.getElementById("uploadTorrent").files.length > 0){ // prepare file upload
-		sendData.push({ 
-			'do': 'add', 
-			fid: $('input[id=torrentFileUpdateID]').val(), 
-			rid: $('input[id=releaseID]').val(), 
-			quality: $('input[id=torrentFileSeriesQuality]').val(), 
-			series: $('input[id=torrentFileSeries]').val(), 
+		sendData.push({
+			'do': 'add',
+			fid: $('input[id=torrentFileUpdateID]').val(),
+			rid: $('input[id=releaseID]').val(),
+			quality: $('input[id=torrentFileSeriesQuality]').val(),
+			series: $('input[id=torrentFileSeries]').val(),
 			ctime: '',
 		});
 		form_data.append('torrent', $('#uploadTorrent').prop('files')[0]);
@@ -404,7 +405,7 @@ $(document).on('click', '[data-send-torrent]', function(e){
 		data: form_data,
 		url: "//"+document.domain+"/public/torrent/index.php",
 		success: function(json) {
-			data = JSON.parse(json);			
+			data = JSON.parse(json);
 			if(data.err != 'ok'){
 				$("#changeAnnounceMes").html('Редактирование торрентов (<font color=red>'+data.mes+'</font>)');
 				return;
@@ -444,7 +445,7 @@ $('#uploadPosterAdmin').change(function(e) {
 		reader.onload = function(e) {
 			$('#adminPoster').attr('src', e.target.result);
 		}
-		reader.readAsDataURL(this.files[0]);		
+		reader.readAsDataURL(this.files[0]);
 	}
 });
 
@@ -462,14 +463,14 @@ $(document).on('click', '[data-release-new], [data-release-update]', function(e)
 		'type': $('input[id=nType]').val(),
 		'genre': $.trim($('.chosen').val().toString().replace(/,/g, ", ")),
 		'voice': $('input[id=nVoice]').val(),
-		
+
 		'translator': $('input[id=nTranslator]').val(),
 		'editing': $('input[id=nEditing]').val(),
 		'decor': $('input[id=nDecor]').val(),
 		'timing': $('input[id=nTiming]').val(),
-		
+
 		'block': $('input[id=nBlock]').val(),
-		
+
 		'announce': $('input[id=nAnnounce]').val(),
 		'status': $('select[id=nStatus]').val(),
 		'day': $('select[id=nDay]').val(),
@@ -477,7 +478,7 @@ $(document).on('click', '[data-release-new], [data-release-update]', function(e)
 		'description': $('textarea[id=nDescription]').val(),
 	};
 	if($(this).data('release-update') !== undefined){
-		sendData = $.extend(sendData, {'update': $('input[id=releaseID]').val()}); 
+		sendData = $.extend(sendData, {'update': $('input[id=releaseID]').val()});
 	}
 	if(document.getElementById("uploadPosterAdmin").files.length > 0){ // prepare file upload
 		form_data.append('poster', $('#uploadPosterAdmin').prop('files')[0]);
@@ -515,7 +516,7 @@ $(document).on('click', '[data-xrelease-edit]', function(e){
 		$('div#editHeader').show();
 		$('div#xreleaseDesc').show();
 		$(".chosen").val(chosenGenre).trigger("chosen:updated.chosen");
-		
+
 	}else{
 		$('div#xreleaseEdit').hide();
 		$('div#editHeader').hide();
@@ -624,12 +625,15 @@ $('#rPosition').on('change', function() {
 $('#rAccept').on('change', function() {
 	$("#rAccept").attr("disabled", true);
 	$('#sendRequest').show();
+	$("div#RecaptchaField").show();
+	$.getScript("https://www.google.com/recaptcha/api.js?onload=CaptchaCallback&render=explicit");
 });
 
 $(document).on('click', '[data-send-request]', function(e){
 	if($('select[id=rPosition]').val() === null){
 		return;
 	}
+	$('#sendRequest').hide();
 	var fields = {
 		"rPosition": $('select[id=rPosition]').val(),
 		"rName": $('input[id=rName]').val(),
@@ -647,15 +651,19 @@ $(document).on('click', '[data-send-request]', function(e){
 		"voiceExample": $('input[id=voiceExample]').val(),
 		"voiceTiming": $('input[id=voiceTiming]').val(),
 		"subExp": $('input[id=subExp]').val(),
-		"subPosition": $('input[id=subPosition]').val(),	
+		"subPosition": $('input[id=subPosition]').val(),
 	}
-	$.post("//"+document.domain+"/public/hh.php", {'info': JSON.stringify(fields)}, function(json){
+	$.post("//"+document.domain+"/public/hh.php", {'info': JSON.stringify(fields), 'g-recaptcha-response': grecaptcha.getResponse(recaptcha1), 'recaptcha': 2}, function(json){
 		if(json){
 			data = JSON.parse(json);
 			if(data.err == 'ok'){
+				$("div#RecaptchaField").hide();
 				$('#requestModal').modal('show');
 			}else{
 				$("#sendHHMes").html('Пожалуйста, заполните (<font color=red>'+data.mes+'</font>)');
+				$('#sendRequest').show();
+				$("div#RecaptchaField").show();
+				grecaptcha.reset(recaptcha1);
 			}
 		}
 	});
@@ -710,12 +718,50 @@ $(document).on("click", "[data-random-release]", function(e) {
 	});
 });
 
-
 $(document).on("click", "[data-release-tags]", function(e) {
 	$(this).blur();
 	e.preventDefault();
 	$('#tagsModal').modal('show');
 });
+
+$(document).on("click", "[data-release-error]", function(e) {
+	$(this).blur();
+	e.preventDefault();
+	$('#sendErrorReport').modal('show');
+	if(typeof recaptcha1 === "undefined"){
+		$.getScript("https://www.google.com/recaptcha/api.js?onload=CaptchaCallback&render=explicit");
+	}else{
+		grecaptcha.reset(recaptcha1);
+	}
+});
+
+$(document).on("click", "[data-send-release-error]", function(e) {
+	$(this).blur();
+	e.preventDefault();
+	mes = $('textarea[id=reportMes]').val();
+	$("[data-send-release-error]").hide();
+	$.post("//"+document.domain+"/public/error.php", { 'mes': mes, 'url': window.location.pathname, 'g-recaptcha-response': grecaptcha.getResponse(recaptcha1), 'recaptcha': 2 }, function(json){
+		console.log(json);
+		data = JSON.parse(json);
+		if(data.err == 'ok'){
+			$('#sendErrorReport').modal('hide');
+			$('#sendReportSuccess').modal('show');
+			setTimeout(function(){
+				$('#sendReportSuccess').modal('hide');
+			},1250);
+		}else{
+			$("#changeErrorReportMes").html('Сообщить об ошибке (<font color=red>'+data.mes+'</font>)');
+			grecaptcha.reset(recaptcha1);
+			setTimeout(function(){
+				$("[data-send-release-error]").show();
+			},500);
+		}
+	});
+});
+
+function anilibriaIframe(){
+	$('#iframeModal').modal('show');
+}
 
 $(".spoiler").click(function() {
     $(this).next('.spoiler-content').toggleClass("opened");

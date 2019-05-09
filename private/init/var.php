@@ -1,4 +1,7 @@
 <?php
+require('/var/www/anilibria/root/private/MaxMind-GeoIP2/geoip2.phar');
+$maxmind = new GeoIp2\Database\Reader('/var/www/anilibria/root/private/MaxMind-GeoIP2/maxmind-db/GeoLite2-Country.mmdb');
+
 $var['title'] = 'AniLibria - так звучит аниме!';
 $var['description'] = '';
 $var['og'] = '';
@@ -6,13 +9,21 @@ $var['page'] = '';
 $var['release'] = [];
 $var['time'] = time();
 $var['ip'] = $_SERVER['REMOTE_ADDR'];
+
+try{
+	$maxmindInfo = $maxmind->country($var['ip']);
+	$var['country'] = $maxmindInfo->country->isoCode;
+}catch(GeoIp2\Exception\AddressNotFoundException $e){
+	$var['country'] = false;
+}
+
 $var['user_agent'] = '';
 if(!empty($_SERVER['HTTP_USER_AGENT'])){
 	$var['user_agent'] = htmlspecialchars($_SERVER['HTTP_USER_AGENT'], ENT_QUOTES, 'UTF-8');
 }
 $var['default_user_values'] = '{"name":"","age":"","sex":"","vk":"","telegram":"","steam":"","phone":"","skype":"","facebook":"","instagram":"","youtube":"","twitch":"","twitter":""}';
 
-$var['app_version'] = 45;
+$var['app_version'] = 46;
 
 $var['sex'] = [
 	'Не указано',
@@ -76,7 +87,7 @@ $var['user_values'] = [
 
 $var['error'] = [
 	'success' => 'Успех',
-	'empty' => 'Пустое значение, заполните все поля',
+	'empty' => 'Пустое значение, заполните поля',
 	'wrong' => 'Неправильное значение',
 	'authorized' => 'Уже авторизован',
 	'registered' => 'Уже зарегистрирован',
