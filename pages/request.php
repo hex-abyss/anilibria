@@ -92,18 +92,6 @@ require($_SERVER['DOCUMENT_ROOT'].'/private/header.php');
 			</ul>
 			<br/>
 		</div>
-		<div class="req reqe">
-			<font color="#f2d20c" style="font-size: 16px;">
-				<b>Пиарщики</b>
-			</font>
-			<ul>
-				<li>Наличие свободного времени</li>
-				<li>Желание бескорыстно помочь проекту</li>
-				<li>Умение вежливо общаться с людьми</li>
-				<li>Грамотное письмо(речь)</li>
-			</ul>
-			<br/>
-		</div>
 		<div class="req">
 			<font style="font-size: 16px;">
 				<b>Условия и обязанности</b>
@@ -136,7 +124,6 @@ require($_SERVER['DOCUMENT_ROOT'].'/private/header.php');
 		<option value="2">Войсер</option>
 		<option value="3">Саббер</option>
 		<option value="4">Сидер</option>
-		<option value="5">Пиарщик</option>
     </select>
 	<input id="rName" class="form-control" style="margin-top: 7px;" placeholder="Имя" autocomplete="off">
 	<input id="rNickname" class="form-control" style="margin-top: 7px;" placeholder="Никнейм/ творческий псевдоним (например: Lupin)" autocomplete="off">
