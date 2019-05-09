@@ -2541,7 +2541,7 @@ function sendHH(){
 		if(empty($val)){
 			_message('empty', 'error');
 		}
-		if(mb_strlen($val) > 300){
+		if(mb_strlen($val) > 600){
 			_message('long', 'error');
 		}
 		if(!array_key_exists($key, $info)){
