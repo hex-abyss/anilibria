@@ -183,6 +183,11 @@ function apiList()
                 $src = file_get_contents($_SERVER['DOCUMENT_ROOT'] . "/private/app_updates/config.txt");
                 return json_decode($src, true);
                 break;
+                
+            case 'donation_details':
+                $src = file_get_contents($_SERVER['DOCUMENT_ROOT'] . "/private/app_updates/donation_info.txt");
+                return json_decode($src, true);
+                break;
 
             case 'empty':
                 return [];
